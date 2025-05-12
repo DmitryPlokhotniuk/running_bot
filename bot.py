@@ -87,10 +87,12 @@ async def cmd_run(message: Message) -> None:
 
 # Отправка еженедельного отчета
 async def send_weekly_report(user_id: int) -> None:
-    if user_id not in users_db or not users_db[user_id]["weekly_runs"]:
+    stats = get_user_stats(user_id)
+    
+    if not stats["weekly_runs"]:
         return
     
-    weekly_distance = sum(users_db[user_id]["weekly_runs"].values())
+    weekly_distance = stats["weekly_distance"]
     rank = determine_rank(weekly_distance)
     
     start_date, end_date = get_week_range()
@@ -99,7 +101,7 @@ async def send_weekly_report(user_id: int) -> None:
     
     # Формирование детализации по дням
     details = ""
-    for run_date, distance in sorted(users_db[user_id]["weekly_runs"].items()):
+    for run_date, distance in sorted(stats["weekly_runs"].items()):
         date_obj = datetime.date.fromisoformat(run_date)
         details += f"• {date_obj.strftime('%d.%m')}: {distance:.1f} км\n"
     
