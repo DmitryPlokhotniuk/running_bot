@@ -14,7 +14,7 @@ from aiogram.fsm.state import State, StatesGroup
 from config import BOT_TOKEN
 from database import (
     init_user, add_run, get_user_stats, has_runs_this_week,
-    get_week_range, users_db
+    get_week_range, users_db, get_weekly_leaderboard, get_monthly_leaderboard
 )
 from ranks import determine_rank, calculate_progress, CHALLENGES
 from messages import (
@@ -45,10 +45,13 @@ def get_main_keyboard():
     kb = [
         [
             KeyboardButton(text="📊 Статистика"),
-            KeyboardButton(text="🎯 Задания")
+            KeyboardButton(text="🏆 Таблица лидеров")
         ],
         [
-            KeyboardButton(text="🏃‍♂️ Записать пробежку"),
+            KeyboardButton(text="🎯 Задания"),
+            KeyboardButton(text="🏃‍♂️ Записать пробежку")
+        ],
+        [
             KeyboardButton(text="❓ Помощь")
         ]
     ]
@@ -60,7 +63,8 @@ def get_main_keyboard():
 async def cmd_start(message: Message) -> None:
     logging.info(f"Получена команда /start от пользователя {message.from_user.id}")
     user_id = message.from_user.id
-    init_user(user_id)
+    username = message.from_user.username or message.from_user.first_name
+    init_user(user_id, username)
     
     welcome_text = WELCOME_MESSAGE.format(name=message.from_user.first_name)
     await message.answer(welcome_text, reply_markup=get_main_keyboard())
@@ -188,6 +192,34 @@ async def cmd_stats(message: Message) -> None:
     
     await message.answer(response, reply_markup=get_main_keyboard())
 
+# Обработчик команды /leaderboard - таблица лидеров
+@router.message(Command("leaderboard"))
+async def cmd_leaderboard(message: Message) -> None:
+    user_id = message.from_user.id
+    
+    # Получаем списки лидеров
+    weekly_leaders = get_weekly_leaderboard(10)
+    monthly_leaders = get_monthly_leaderboard(10)
+    
+    if not weekly_leaders:
+        await message.answer("📊 Пока никто не бегал на этой неделе. Будь первым! 🏃‍♂️", reply_markup=get_main_keyboard())
+        return
+    
+    # Формируем таблицу лидеров за неделю
+    weekly_leaderboard = "🏆 Таблица лидеров за неделю:\n\n"
+    for i, leader in enumerate(weekly_leaders, 1):
+        weekly_leaderboard += f"{i}. {leader['username']}: {leader['weekly_distance']:.1f} км — {leader['rank']}\n"
+    
+    # Формируем таблицу лидеров за месяц
+    monthly_leaderboard = "\n🏆 Таблица лидеров за месяц:\n\n"
+    for i, leader in enumerate(monthly_leaders, 1):
+        monthly_leaderboard += f"{i}. {leader['username']}: {leader['monthly_distance']:.1f} км — {leader['rank']}\n"
+    
+    # Объединяем таблицы
+    response = weekly_leaderboard + monthly_leaderboard
+    
+    await message.answer(response, reply_markup=get_main_keyboard())
+
 # Обработчик команды /challenge - дополнительные задания
 @router.message(Command("challenge"))
 async def cmd_challenge(message: Message) -> None:
@@ -221,6 +253,12 @@ async def button_stats(message: Message) -> None:
     logging.info(f"Нажата кнопка 'Статистика' пользователем {message.from_user.id}")
     await cmd_stats(message)
 
+# Обработчик кнопки "Таблица лидеров"
+@router.message(lambda message: message.text == "🏆 Таблица лидеров")
+async def button_leaderboard(message: Message) -> None:
+    logging.info(f"Нажата кнопка 'Таблица лидеров' пользователем {message.from_user.id}")
+    await cmd_leaderboard(message)
+
 # Обработчик кнопки "Задания"
 @router.message(lambda message: message.text == "🎯 Задания")
 async def button_challenge(message: Message) -> None:
@@ -248,30 +286,24 @@ async def process_distance(message: Message, state: FSMContext) -> None:
     try:
         distance = float(message.text.replace(',', '.'))
         if distance <= 0:
-            await message.answer("⚠️ Дистанция должна быть положительным числом! Попробуйте еще раз:")
+            await message.answer("⚠️ Дистанция должна быть положительным числом!")
             return
-        
-        # Сбрасываем состояние
-        await state.clear()
-        
-        # Обрабатываем пробежку
-        await process_run(message, user_id, distance)
-        
     except ValueError:
-        await message.answer("⚠️ Некорректный формат дистанции. Используйте число, например: 5.2")
+        await message.answer("⚠️ Некорректный формат дистанции. Используй число, например: 5.2")
+        return
+    
+    await state.clear()
+    await process_run(message, user_id, distance)
 
-# Обработчик для неизвестных сообщений
+# Обработчик неизвестных сообщений
 @router.message()
 async def unknown_message(message: Message) -> None:
     await message.answer(UNKNOWN_COMMAND_MESSAGE, reply_markup=get_main_keyboard())
 
 # Запуск бота
 async def main() -> None:
-    logging.info("Запуск бота 'Беговая Империя'")
-    try:
-        await dp.start_polling(bot)
-    except Exception as e:
-        logging.error(f"Ошибка при запуске бота: {e}")
+    logging.info("Запуск бота")
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main()) 
