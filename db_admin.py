@@ -82,7 +82,7 @@ def user_stats(user_id):
         
         print(f"\nСтатистика пользователя ID: {user_id}")
         print("-" * 50)
-        print(f"Всего пробежано: {total_distance:.1f} км")
+        print(f"Всего преодолено: {total_distance:.1f} км")
         print(f"Дата регистрации: {joined_date_formatted}")
         print(f"Текущая неделя: {current_week}")
         

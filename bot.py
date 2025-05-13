@@ -169,7 +169,7 @@ async def cmd_stats(message: Message) -> None:
     response = (
         f"📊 Твоя статистика бега:\n\n"
         f"Текущая неделя ({start_date.strftime('%d.%m')} - {end_date.strftime('%d.%m')}):\n"
-        f"🏃‍♂️ Пробежано за неделю: {weekly_distance:.1f} км\n"
+        f"🏃‍♂️ Преодолено за неделю: {weekly_distance:.1f} км\n"
         f"🏅 Текущий ранг: {rank}\n\n"
     )
     
@@ -184,7 +184,7 @@ async def cmd_stats(message: Message) -> None:
         date_obj = datetime.date.fromisoformat(run_date)
         response += f"• {date_obj.strftime('%d.%m')}: {distance:.1f} км\n"
     
-    response += f"\n🌟 Всего пробежано с момента регистрации: {total_distance:.1f} км"
+    response += f"\n🌟 Всего преодолено с момента регистрации: {total_distance:.1f} км"
     
     await message.answer(response, reply_markup=get_main_keyboard())
 
@@ -198,7 +198,7 @@ async def cmd_challenge(message: Message) -> None:
     weekly_distance = stats["weekly_distance"]
     rank = determine_rank(weekly_distance)
     
-    user_challenges = CHALLENGES.get(rank, CHALLENGES["Падуан"])
+    user_challenges = CHALLENGES.get(rank, CHALLENGES["Падаван"])
     selected_challenge = random.choice(user_challenges)
     
     response = CHALLENGE_MESSAGE.format(
