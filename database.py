@@ -37,6 +37,34 @@ def init_db() -> None:
     )
     ''')
     
+    # Создаем таблицу рангов
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS ranks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        min_km INTEGER NOT NULL,
+        max_km REAL NOT NULL
+    )
+    ''')
+    
+    # Создаем таблицу мотивационных сообщений
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS motivational_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message TEXT NOT NULL
+    )
+    ''')
+    
+    # Создаем таблицу заданий
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS challenges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rank_id INTEGER NOT NULL,
+        challenge_text TEXT NOT NULL,
+        FOREIGN KEY (rank_id) REFERENCES ranks (id)
+    )
+    ''')
+    
     conn.commit()
     conn.close()
 
@@ -202,6 +230,9 @@ def get_weekly_leaderboard(limit: int = 10) -> List[Dict[str, Any]]:
     """
     Возвращает таблицу лидеров по недельному километражу
     """
+    # Импортируем функцию из db_utils для избежания циклического импорта
+    from db_utils import determine_rank_db
+    
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
@@ -220,8 +251,7 @@ def get_weekly_leaderboard(limit: int = 10) -> List[Dict[str, Any]]:
     leaderboard = []
     for user_id, username, weekly_distance in cursor.fetchall():
         # Определяем ранг для пользователя
-        from ranks import determine_rank
-        rank = determine_rank(weekly_distance)
+        rank = determine_rank_db(weekly_distance)
         
         # Используем более дружественный формат имени
         user_name = username if username else f"Бегун #{user_id}"
@@ -241,6 +271,9 @@ def get_monthly_leaderboard(limit: int = 10) -> List[Dict[str, Any]]:
     """
     Возвращает таблицу лидеров по месячному километражу
     """
+    # Импортируем функцию из db_utils для избежания циклического импорта
+    from db_utils import determine_rank_db
+    
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
@@ -269,8 +302,7 @@ def get_monthly_leaderboard(limit: int = 10) -> List[Dict[str, Any]]:
         
         weekly_distance = cursor.fetchone()[0] or 0
         
-        from ranks import determine_rank
-        rank = determine_rank(weekly_distance)
+        rank = determine_rank_db(weekly_distance)
         
         # Используем более дружественный формат имени
         user_name = username if username else f"Бегун #{user_id}"

@@ -16,7 +16,7 @@ from database import (
     init_user, add_run, get_user_stats, has_runs_this_week,
     get_week_range, users_db, get_weekly_leaderboard, get_monthly_leaderboard
 )
-from ranks import determine_rank, calculate_progress, CHALLENGES
+from ranks import determine_rank, calculate_progress, get_random_challenge
 from messages import (
     get_random_motivation, WELCOME_MESSAGE, HELP_MESSAGE,
     UNKNOWN_COMMAND_MESSAGE, RUN_SUCCESS_MESSAGE,
@@ -230,8 +230,8 @@ async def cmd_challenge(message: Message) -> None:
     weekly_distance = stats["weekly_distance"]
     rank = determine_rank(weekly_distance)
     
-    user_challenges = CHALLENGES.get(rank, CHALLENGES["Падаван"])
-    selected_challenge = random.choice(user_challenges)
+    # Получаем случайное задание для ранга пользователя
+    selected_challenge = get_random_challenge(rank)
     
     response = CHALLENGE_MESSAGE.format(
         rank=rank,
